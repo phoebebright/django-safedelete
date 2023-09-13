@@ -16,14 +16,20 @@ def related_objects(obj, only_deleted_by_cascade=False):
     collector = NestedObjects(using=router.db_for_write(type(obj)))
     collector.collect([obj])
 
+    visited = set()
     def flatten(elem):
         if isinstance(elem, tuple):
             return elem
-        elif obj == elem or not only_deleted_by_cascade or getattr(elem, DELETED_BY_CASCADE_FIELD_NAME, False):
+        if elem in visited:
+            return ()
+        visited.add(elem)
+
+        if obj == elem or not only_deleted_by_cascade or getattr(elem, DELETED_BY_CASCADE_FIELD_NAME, False):
             elem = [(elem,) if elem != obj else (), *collector.edges.get(elem, [])]
             return chain.from_iterable(map(flatten, elem))
-        return ()
 
+        return ()
+        
     return chain.from_iterable(map(flatten, collector.edges[None]))
 
 
